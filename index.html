@@ -17,12 +17,10 @@
       position:relative;
     }
 
-    body::before{
+    body::before {
       content:"";
       position:fixed;inset:0;
       background:url('https://i.imgur.com/2AugqE7.jpeg') center/cover no-repeat;
-      opacity:1;
-      transition:opacity 1s ease;
       z-index:0;
       pointer-events:none;
       -webkit-mask-image: var(--flashlight, none);
@@ -31,6 +29,8 @@
       mask-repeat: no-repeat;
       -webkit-mask-size: 100vw 100vh;
       mask-size: 100vw 100vh;
+      opacity: 0; /* default mati */
+      transition: opacity 1.5s ease; /* fade in/out */
     }
 
     .fog{
@@ -216,40 +216,37 @@
       document.body.style.setProperty('--flashlight', 'none');
     });
 
-    let idleTimer;
-    function updateFlashlight(x, y) {
-      const r = 80;
-      const fade = 60;
-      document.body.style.setProperty('--flashlight',
-    `   radial-gradient(circle ${r + fade}px at ${x}px ${y}px, white 0%, white 60%, transparent 100%)`
-      );
-      document.body.style.setProperty('--flashlightOpacity', '1'); // muncul lagi
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        document.body.style.setProperty('--flashlightOpacity', '0'); // fade out
-      }, 3000);
-    }
+let idleTimer;
+function updateFlashlight(x, y) {
+  const r = 80;
+  const fade = 60;
+  document.body.style.setProperty('--flashlight',
+    `radial-gradient(circle ${r + fade}px at ${x}px ${y}px, white 0%, white 60%, transparent 100%)`
+  );
+  document.body.classList.add("flashlight-on");
+  document.body.querySelector("body::before"); // force reflow (bugfix Android)
+  document.body.style.setProperty("--flashlight-active", "1");
 
-    // Mouse move
-    document.body.addEventListener('mousemove', e => {
-      updateFlashlight(e.clientX, e.clientY);
-    });
+  // munculin flashlight
+  document.body.style.setProperty("opacity", "1");
 
-    // Touch move (Android/iOS)
-    document.body.addEventListener('touchmove', e => {
-      const touch = e.touches[0];
-      updateFlashlight(touch.clientX, touch.clientY);
-    });
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    document.body.style.setProperty("opacity", "0"); // fade out kalau idle
+  }, 3000);
+}
 
-    // Reset kalau mouse masuk lagi
-    document.body.addEventListener('mouseenter', e => {
-      updateFlashlight(e.clientX, e.clientY);
-    });
+// Mouse move
+document.body.addEventListener('mousemove', e => {
+  updateFlashlight(e.clientX, e.clientY);
+});
 
-    // Hilangin langsung kalau mouse keluar
-    document.body.addEventListener('mouseleave', () => {
-      document.body.style.setProperty('--flashlightOpacity', '0');
-    });
+// Touch move
+document.body.addEventListener('touchmove', e => {
+  const touch = e.touches[0];
+  updateFlashlight(touch.clientX, touch.clientY);
+});
+
 
   </script>
 </body>
