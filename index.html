@@ -130,6 +130,12 @@
       pointer-events: none !important;
       animation-play-state: paused !important;
     }
+
+    body::before {
+      transition: opacity 1.5s ease; /* biar smooth */
+      opacity: var(--flashlightOpacity, 0);
+    }
+
   </style>
 </head>
 <body>
@@ -209,6 +215,42 @@
     document.body.addEventListener('mouseleave', () => {
       document.body.style.setProperty('--flashlight', 'none');
     });
+
+    let idleTimer;
+    function updateFlashlight(x, y) {
+      const r = 80;
+      const fade = 60;
+      document.body.style.setProperty('--flashlight',
+    `   radial-gradient(circle ${r + fade}px at ${x}px ${y}px, white 0%, white 60%, transparent 100%)`
+      );
+      document.body.style.setProperty('--flashlightOpacity', '1'); // muncul lagi
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        document.body.style.setProperty('--flashlightOpacity', '0'); // fade out
+      }, 3000);
+    }
+
+    // Mouse move
+    document.body.addEventListener('mousemove', e => {
+      updateFlashlight(e.clientX, e.clientY);
+    });
+
+    // Touch move (Android/iOS)
+    document.body.addEventListener('touchmove', e => {
+      const touch = e.touches[0];
+      updateFlashlight(touch.clientX, touch.clientY);
+    });
+
+    // Reset kalau mouse masuk lagi
+    document.body.addEventListener('mouseenter', e => {
+      updateFlashlight(e.clientX, e.clientY);
+    });
+
+    // Hilangin langsung kalau mouse keluar
+    document.body.addEventListener('mouseleave', () => {
+      document.body.style.setProperty('--flashlightOpacity', '0');
+    });
+
   </script>
 </body>
 </html>
