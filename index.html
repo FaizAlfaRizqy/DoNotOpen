@@ -17,10 +17,12 @@
       position:relative;
     }
 
-    body::before {
+    body::before{
       content:"";
       position:fixed;inset:0;
       background:url('https://i.imgur.com/2AugqE7.jpeg') center/cover no-repeat;
+      opacity:1;
+      transition:opacity 1s ease;
       z-index:0;
       pointer-events:none;
       -webkit-mask-image: var(--flashlight, none);
@@ -29,8 +31,6 @@
       mask-repeat: no-repeat;
       -webkit-mask-size: 100vw 100vh;
       mask-size: 100vw 100vh;
-      opacity: 0; /* default mati */
-      transition: opacity 1.5s ease; /* fade in/out */
     }
 
     .fog{
@@ -136,6 +136,51 @@
       opacity: var(--flashlightOpacity, 0);
     }
 
+    body { cursor: none; }
+    .fake-cursor {
+      position: fixed;
+      width: 20px; height: 20px;
+      border: 2px solid white;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.1s linear;
+    }
+
+    /* overlay exit scare */
+#exit-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.98);
+  color: #ff3b3b;
+  font-size: clamp(18px, 4vw, 36px);
+  z-index: 999999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  text-align: center;
+  padding: 24px;
+  line-height: 1.2;
+}
+#exit-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+#exit-overlay .title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#exit-overlay .sub {
+  margin-top: 12px;
+  font-size: 0.7em;
+  color: rgba(255,60,60,0.9);
+}
+
+
+
   </style>
 </head>
 <body>
@@ -177,30 +222,63 @@
       else if (el.msRequestFullscreen) el.msRequestFullscreen();
     }
 
-    message.addEventListener("click", () => {
-      // Play musik + fullscreen saat klik pertama
-      if (music.paused) {
-        music.play().catch(err => console.log("Autoplay blocked:", err));
-        goFullscreen();
-      }
+message.addEventListener("click", () => {
+  if (music.paused) {
+    music.play().catch(err => console.log("Autoplay blocked:", err));
+    goFullscreen();
+  }
 
-      clickCount++;
-      if (clickCount === 1) {
-        messageText.innerHTML = "Too late.";
-        message.setAttribute("data-text", "Too late.");
-        navigator.vibrate?.(200);
-      } else if (clickCount === 2) {
-        messageText.innerHTML = "You went too far.";
-        message.setAttribute("data-text", "You went too far.");
-        navigator.vibrate?.([200,100,200]);
-        document.body.classList.add("frozen");
-        setTimeout(()=>{ document.body.classList.remove("frozen"); }, 3000);
-      } else if (clickCount === 3) {
-        messageText.innerHTML = "You can't go back.";
-        message.setAttribute("data-text", "You can't go back.");
-        navigator.vibrate?.(600);
-      }
-    });
+  clickCount++;
+
+  if (clickCount === 1) {
+    messageText.innerHTML = "Why are you still clicking?";
+    message.setAttribute("data-text", "Why are you still clicking?");
+    navigator.vibrate?.(200);
+
+  } else if (clickCount === 2) {
+    const os = detectOS();
+    messageText.innerHTML = `I see you're on ${os}...`;
+    message.setAttribute("data-text", `I see you're on ${os}...`);
+    navigator.vibrate?.([200, 100, 200]);
+
+  } else if (clickCount === 3) {
+  const hour = new Date().getHours();
+  let msg = "";
+
+  if (hour >= 0 && hour < 3) {
+    msg = `It's ${hour}:00... why are you still awake?`;
+  } else if (hour >= 3 && hour <= 5) {
+    msg = `Isn't it ${hour} AM? You're wasting your time.`;
+  } else if (hour >= 6 && hour < 12) {
+    msg = `Good morning... but you shouldn't be here at ${hour}:00.`;
+  } else if (hour >= 12 && hour < 18) {
+    msg = `It's ${hour}:00 in the afternoon... still trapped.`;
+  } else if (hour >= 18 && hour < 22) {
+    msg = `Evening already (${hour}:00)... you can't escape.`;
+  } else {
+    msg = `It's ${hour}:00 at night... too late now.`;
+  }
+
+  messageText.innerHTML = msg;
+  message.setAttribute("data-text", msg);
+  navigator.vibrate?.(600);
+}
+ else {
+    // klik 4x ke atas
+    const creepyLines = [
+      "You can't escape.",
+      "They're watching you.",
+      "Do you feel that?",
+      "Stop. It's too late.",
+      "Your screen isn’t safe anymore."
+    ];
+    const randomMsg = creepyLines[Math.floor(Math.random() * creepyLines.length)];
+    messageText.innerHTML = randomMsg;
+    message.setAttribute("data-text", randomMsg);
+    navigator.vibrate?.([100, 50, 100, 50, 300]);
+  }
+});
+
 
     // Flashlight effect
     document.body.addEventListener('mousemove', function(e){
@@ -216,36 +294,211 @@
       document.body.style.setProperty('--flashlight', 'none');
     });
 
-let idleTimer;
-function updateFlashlight(x, y) {
-  const r = 80;
-  const fade = 60;
-  document.body.style.setProperty('--flashlight',
-    `radial-gradient(circle ${r + fade}px at ${x}px ${y}px, white 0%, white 60%, transparent 100%)`
-  );
-  document.body.classList.add("flashlight-on");
-  document.body.querySelector("body::before"); // force reflow (bugfix Android)
-  document.body.style.setProperty("--flashlight-active", "1");
+    let idleTimer;
+    function updateFlashlight(x, y) {
+      const r = 80;
+      const fade = 60;
+      document.body.style.setProperty('--flashlight',
+    `   radial-gradient(circle ${r + fade}px at ${x}px ${y}px, white 0%, white 60%, transparent 100%)`
+      );
+      document.body.style.setProperty('--flashlightOpacity', '1'); // muncul lagi
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        document.body.style.setProperty('--flashlightOpacity', '0'); // fade out
+      }, 3000);
+    }
 
-  // munculin flashlight
-  document.body.style.setProperty("opacity", "1");
+    // Mouse move
+    document.body.addEventListener('mousemove', e => {
+      updateFlashlight(e.clientX, e.clientY);
+    });
 
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => {
-    document.body.style.setProperty("opacity", "0"); // fade out kalau idle
-  }, 3000);
+    // Touch move (Android/iOS)
+    document.body.addEventListener('touchmove', e => {
+      const touch = e.touches[0];
+      updateFlashlight(touch.clientX, touch.clientY);
+    });
+
+    // Reset kalau mouse masuk lagi
+    document.body.addEventListener('mouseenter', e => {
+      updateFlashlight(e.clientX, e.clientY);
+    });
+
+    // Hilangin langsung kalau mouse keluar
+    document.body.addEventListener('mouseleave', () => {
+      document.body.style.setProperty('--flashlightOpacity', '0');
+    });
+
+    const fakeCursor = document.createElement("div");
+fakeCursor.classList.add("fake-cursor");
+document.body.appendChild(fakeCursor);
+
+document.addEventListener("mousemove", e => {
+  fakeCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+});
+
+// “lari sendiri” misalnya saat mouse deket pojok kanan atas (close button area)
+function runAway() {
+  fakeCursor.style.transition = "transform 0.5s ease";
+  fakeCursor.style.transform = `translate(${window.innerWidth/2}px, ${window.innerHeight/2}px)`;
 }
 
-// Mouse move
-document.body.addEventListener('mousemove', e => {
-  updateFlashlight(e.clientX, e.clientY);
+function detectOS() {
+  let ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("android")) return "Android";
+  if (ua.includes("iphone") || ua.includes("ipad")) return "iOS";
+  if (ua.includes("win")) return "Windows";
+  if (ua.includes("mac")) return "MacOS";
+  if (ua.includes("linux")) return "Linux";
+  return "Unknown";
+}
+
+function creepyMessage() {
+  const os = detectOS();
+  const hour = new Date().getHours();
+
+  if (os === "Android") {
+    return "I see you're on Android...";
+  } else if (os === "Windows") {
+    return "Windows won’t save you...";
+  } else if (os === "iOS") {
+    return "Using iPhone won’t help...";
+  }
+
+  if (hour >= 0 && hour <= 4) {
+    return "Why are you awake at this hour?";
+  } else if (hour >= 22 || hour < 0) {
+    return "It’s too late to be here...";
+  }
+
+  return "You shouldn’t be here...";
+}
+ 
+window.addEventListener("beforeunload", function (e) {
+  const msg = "You can't leave yet...";
+  e.preventDefault();
+  e.returnValue = msg; // ini bikin browser keluarin default confirm dialog
+  return msg;
 });
 
-// Touch move
-document.body.addEventListener('touchmove', e => {
-  const touch = e.touches[0];
-  updateFlashlight(touch.clientX, touch.clientY);
-});
+// --- Exit scare: exit-intent overlay + beforeunload trap --- //
+(function(){
+  let interacted = false; // track interaction so audio/vibrate allowed
+  let exitCount = 0; // counter banyaknya percobaan keluar
+  const exitMessages = [
+    "You can't leave yet...",
+    "I told you, no escape.",
+    "Stop trying.",
+    "They're watching you.",
+    "It's already too late."
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'exit-overlay';
+  overlay.innerHTML = '<div><div class="title"></div><div class="sub">Not so fast.</div></div>';
+  document.body.appendChild(overlay);
+
+  // helper: show overlay (setiap kali dipanggil, pesan beda)
+  function showExitOverlay() {
+    const msg = exitMessages[exitCount % exitMessages.length];
+    overlay.querySelector(".title").innerText = msg;
+    overlay.classList.add('visible');
+    exitCount++;
+
+    if (interacted) navigator.vibrate?.([200,100,200]);
+    playBeep(200 + (exitCount*30), 200);
+
+    setTimeout(()=> {
+      overlay.classList.remove('visible');
+    }, 2200);
+  }
+
+  // small beep generator (no external file)
+  function playBeep(freq = 440, duration = 150) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.value = 0.0001;
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration/1000);
+      setTimeout(()=> { try { o.stop(); ctx.close(); } catch(e){} }, duration+80);
+    } catch(e){}
+  }
+
+  // mark interacted on first gesture
+  function markInteracted() {
+    interacted = true;
+    window.removeEventListener('touchstart', markInteracted);
+    window.removeEventListener('mousedown', markInteracted);
+    window.removeEventListener('keydown', markInteracted);
+  }
+  window.addEventListener('touchstart', markInteracted, {passive:true});
+  window.addEventListener('mousedown', markInteracted, {passive:true});
+  window.addEventListener('keydown', markInteracted, {passive:true});
+
+  // Exit-intent detection (desktop)
+  let lastMouseY = Infinity;
+  let lastMouseTime = 0;
+  document.addEventListener('mousemove', e => {
+    const now = Date.now();
+    if (e.clientY < 60 && lastMouseY - e.clientY > 20 && (now - lastMouseTime) < 300) {
+      showExitOverlay();
+    }
+    lastMouseY = e.clientY;
+    lastMouseTime = now;
+  });
+
+  document.addEventListener('mouseout', e => {
+    if (!e.relatedTarget && e.clientY <= 0) {
+      showExitOverlay();
+    }
+  });
+
+  // For touch devices
+  let touchStartY = null, touchStartTime = 0;
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    touchStartY = t.clientY;
+    touchStartTime = Date.now();
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    if (!touchStartY) return;
+    const dy = touchStartY - t.clientY;
+    const dt = Date.now() - touchStartTime;
+    if (touchStartY < 120 && dy > 60 && dt < 500) {
+      showExitOverlay();
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', () => { touchStartY = null; });
+
+  // Back button trap (Android)
+  history.pushState(null, document.title, location.href);
+  window.addEventListener('popstate', function(e) {
+    showExitOverlay();
+    history.pushState(null, document.title, location.href);
+    if (interacted) navigator.vibrate?.([100,50,100]);
+    playBeep(300, 120);
+  });
+
+  // beforeunload: still trigger overlay + default prompt
+  window.addEventListener('beforeunload', function (e) {
+    showExitOverlay();
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  });
+})();
+
+
 
 
   </script>
